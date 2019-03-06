@@ -1,2 +1,2 @@
-# Quartz-Broadwell
+# Quartz
 Support Quartz with Broadwell
