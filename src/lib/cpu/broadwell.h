@@ -14,6 +14,12 @@
 
 extern __thread int tls_hw_local_latency;
 extern __thread int tls_hw_remote_latency;
+
+extern __thread uint64_t write_latency_global;
+extern __thread uint64_t read_latency_global;
+
+extern __thread uint64_t hw_latency_global;
+
 #ifdef MEMLAT_SUPPORT
 extern __thread uint64_t tls_global_remote_dram;
 extern __thread uint64_t tls_global_local_dram;
@@ -96,7 +102,7 @@ DECLARE_READ_PMC(broadwell, remote_dram)
    uint64_t llc_hit_diff     = READ_MY_HW_EVENT_DIFF(1);
    uint64_t remote_dram_diff = READ_MY_HW_EVENT_DIFF(2);
    uint64_t remote_dram_write = READ_MY_HW_EVENT_DIFF(3);
-   ret_data_t *ret=NULL;
+
    //uint64_t remote_wrtie  = READ_MY_HW_EVENT_DIFF(4);
    //uint64_t remote_write1  = READ_MY_HW_EVENT_DIFF(5);
 
@@ -118,16 +124,8 @@ DECLARE_READ_PMC(broadwell, remote_dram)
    den = (remote_dram_diff * tls_hw_remote_latency);
    if (den == 0) return 0;
 	//printf("--------------------remote\n");
-	ret=malloc(sizeof(ret_data_t));
-	if(ret==NULL)
-	{
-		printf("alloc memory error.\n");
-		return 0;
-	}
-	
-        ret->x= (uint64_t) (stalls * ((double)((remote_dram_diff) * tls_hw_remote_latency) / den));
-	ret->y= (uint64_t) (double) remote_dram_write * L3_FACTOR * 6;
-	return (uint64_t)ret;
+
+	return (uint64_t)((stalls * ((double)((remote_dram_diff) * tls_hw_remote_latency) / den))* (read_latency_global-hw_latency_global) + (double) remote_dram_write * L3_FACTOR * 6 * (write_latency_global-hw_latency_global));
 }
 
 /*

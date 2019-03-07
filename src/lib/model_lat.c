@@ -106,6 +106,9 @@ static int check_target_latency_against_hw_latency(virtual_topology_t* virtual_t
     return status;
 }
 
+__thread uint64_t read_latency_global = 0;
+__thread uint64_t write_latency_global = 0;
+
 int init_latency_model(config_t* cfg, cpu_model_t* cpu, virtual_topology_t* virtual_topology)
 {
 	int i;
@@ -117,6 +120,11 @@ int init_latency_model(config_t* cfg, cpu_model_t* cpu, virtual_topology_t* virt
 
     __cconfig_lookup_int(cfg, "latency.read", &latency_model.read_latency);
     __cconfig_lookup_int(cfg, "latency.write", &latency_model.write_latency);
+	
+	read_latency_global = latency_model.read_latency;
+	write_latency_global = latency_model.write_latency;
+	
+	DBG_LOG(DEBUG, "Target read (%lu) and write (%lu) latency is ", read_latency_global, write_latency_global);
 
     if (check_target_latency_against_hw_latency(virtual_topology) < 0) {
         return E_INVAL;
@@ -176,6 +184,9 @@ void init_thread_latency_model(thread_t *thread)
     tls_hw_remote_latency = thread->virtual_node->nvram_node->latency;
 }
 
+
+__thread uint64_t hw_latency_global = 0;
+
 void create_latency_epoch()
 {
     uint64_t stall_cycles = 0;
@@ -213,15 +224,14 @@ void create_latency_epoch()
     // this is the generic hardware latency for this thread (it takes into account the current virtual node latencies)
     hw_latency = thread->virtual_node->nvram_node->latency;
     //target_latency = latency_model.read_latency + latency_model.write_latency;
- 
-    ret_data_t *stall = NULL;
+	hw_latency_global = hw_latency;
 
     // check if the thread_self is remote (virtual topology where dram != nvram) or local (dram == nvram)
     // on this case, stall cycles will be a proportion of remote memory accesses
     // TODO: the read pmc method used below must be changed to support PAPI
     if (thread->virtual_node->dram_node != thread->virtual_node->nvram_node &&
             latency_model.pmc_remote_dram) {
-                stall = (ret_data_t*) read_pmc_event(latency_model.pmc_remote_dram);
+                stall_cycles =  read_pmc_event(latency_model.pmc_remote_dram);
 	} else {
 		stall_cycles = read_pmc_event(latency_model.pmc_stall_cycles);
 	}
@@ -232,12 +242,12 @@ void create_latency_epoch()
     }
 #endif
 
-    delay_cycles = stall->x * ((double)(latency_model.read_latency - hw_latency) / ((double) hw_latency)) + stall->y * ((double)(latency_model.write_latency - hw_latency)/((double) hw_latency));
+    delay_cycles = stall_cycles / ((double) hw_latency);
 
     stop = hrtime_cycles();
     tls_overhead += stop - start;
 
-    DBG_LOG(DEBUG, "overhead cycles: %lu; immediate overhead %lu; read stall cycles: %lu; write stall cycles: %lu; delay cycles: %lu\n", tls_overhead, stop - start, stall->x, stall->y, delay_cycles);
+    DBG_LOG(DEBUG, "overhead cycles: %lu; immediate overhead %lu; stall cycles: %lu; delay cycles: %lu\n", tls_overhead, stop - start, stall_cycles, delay_cycles);
 
     if (delay_cycles > tls_overhead) {
     	delay_cycles -= tls_overhead;
