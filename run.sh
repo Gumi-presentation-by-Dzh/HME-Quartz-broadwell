@@ -17,13 +17,13 @@ _RELOAD="reload"
 echo ${_INPUT_COMMAN}
 Init()
 {
-    ${_ROOT} ${_LOAD_PATH} ${_RELOAD}
-	${_ROOT} ${_LOAD_PATH} ${_LOAD}
+    ${_ROOT} bash ${_LOAD_PATH} ${_RELOAD}
+    ${_ROOT} bash ${_LOAD_PATH} ${_LOAD}
 }
 
 Start()
 {
-    numactl --cpunodebind=0 --membind=0 ${_RUN_PATH} ${_INPUT_COMMAN}
+    numactl --cpunodebind=0 --membind=0 bash ${_RUN_PATH} ${_INPUT_COMMAN}
 }
 
 Init
