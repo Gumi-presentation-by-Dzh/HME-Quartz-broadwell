@@ -30,7 +30,7 @@ extern __thread uint64_t tls_global_local_dram;
   ACTION("CYCLE_ACTIVITY:STALLS_L2_PENDING", NULL, 0x55305a3)                                              \
   ACTION("MEM_LOAD_UOPS_L3_HIT_RETIRED:XSNP_NONE", NULL, 0x5308d2)                                        \
   ACTION("MEM_LOAD_UOPS_L3_MISS_RETIRED:REMOTE_DRAM", NULL, 0x5304d3)                                     \
-  ACTION("UNC_H_REQUESTS.WRITES_REMOTE", NULL, 0x5340f0)//0x401) //0x500801)					
+  ACTION("UNC_H_REQUESTS.WRITES_REMOTE", NULL, 0x40801)//0x401) //0x500801)					
   
 #undef FOREACH_PMC_EVENT
 #define FOREACH_PMC_EVENT(ACTION, prefix)                                                                  \
